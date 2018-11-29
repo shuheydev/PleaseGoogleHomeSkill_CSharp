@@ -8,90 +8,38 @@ namespace PleaseGoogleHomeSkill_Csharp
 {
     public static class Phrase
     {
-        private static string skillName = "googleさん";
-
-        private static string[] supportPhraseAfterSkillName =
-        {
-            "(で|に)聞いて",
-            "(で|に)開いて",
-            "(で|に)確認して",
-        };
-        private static string[] connectiveAfterAction =
-        {
-            "を"
-        };
-
-        private static string[] connectiveAfterSkillName =
-        {
-            "で",
-            "を使って",
-            "使って",
-            "に",
-            "の",
-        };
-        private static string[] supportPhraseAfterAction =
-        {
-            "を開始して",
-            "をつけて",
-            "を調べて",
-            "を教えて",
-            "を探して",
-            "を検索して",
-            "をサーチ",
-            "を聞いて",
-            "をチェックして",
-            "を教えて",
-            "を確認して",
-            "をチェック",
-            "を見て",
-            "はどう",
-            "はどうですか",
-            "を調べて",
-        };
-
-        private static string[] invokePhraseAfterSkillName =
-        {
-            "を起動して",
-            "を実行して",
-            "をスタートして",
-            "開いて",
-            "を開いて",
-            "起動して",
-            "を呼び出して",
-            "実行して",
-            "スタートして",
-            "呼び出して",
-            "で",
-            "に",
-        };
+        private readonly static string askPattern = "(聞|訊|き)いて";
 
 
 
-        static bool IsValidSkillCallFormat(string phrase)
-        {
+        public static string ComposeAskSmartSpeakerText(string phrase)
+        { 
 
-            return false;
-        }
-
-        public static string ComposeAskGoogleHomeText(string phrase)
-        {
-            //phraseからは空白を削除しよう
+            //下準備：phraseからは空白を削除しよう
             phrase = Regex.Replace(phrase, @"\s+", "");
+
 
             string speechText = "";
 
-            var startWithSkillNamePattern = @"^google\s*さん";
 
+
+            var startWithSkillNamePattern = @"^(ねえ)?.*?(google)\s*(さん)?";
+
+            //呼び出し名によってスキルが起動された後、ユーザーが
+            //「グーグルさんに～を聞いて」といった場合。
             if (Regex.IsMatch(phrase, startWithSkillNamePattern))
             {//呼び出し名から始まるパターン
 
                 //呼び出し名を削除
                 speechText = Regex.Replace(phrase, startWithSkillNamePattern, "");
 
-                //つなぎ語が先頭に来るはず
-                //先頭がつなぎ語かチェック
-                var connective = connectiveAfterSkillName.OrderByDescending(item => item.Length)
+                //つなぎ語が先頭に来るはず（つなぎ語：で、を使って、使って、に、の）
+                //呼び出し名削除後に先頭がつなぎ語かチェック
+                var connective = PhrasePattern.connectiveAfterSkillName.OrderByDescending(item => item.Length)
                     .FirstOrDefault(item => Regex.IsMatch(speechText, $"^{item}"));
+
+                //つなぎ語だった場合
+                //つなぎ語を削除する
                 if (connective != null)
                 {
                     speechText = Regex.Replace(speechText, $"^{connective}", "");
@@ -99,22 +47,24 @@ namespace PleaseGoogleHomeSkill_Csharp
 
                 //起動フレーズが来るかも
                 //来たら削除
-                var invokePhrase = invokePhraseAfterSkillName.OrderByDescending(item => item.Length)
+                var invokePhrase = PhrasePattern.invokePhraseAfterSkillName.OrderByDescending(item => item.Length)
                     .FirstOrDefault(item => Regex.IsMatch(speechText, $"^{item}"));
                 if (invokePhrase != null)
                 {
                     speechText = Regex.Replace(speechText, $"{invokePhrase}", "");
                 }
 
-                //「聞いて」をそのままGoogleへの問いかけに使うと変になるので
-                speechText = Regex.Replace(speechText, "聞いて", "教えて");
+                //「聞いて」をそのままスマートスピーカへの問いかけに使うと変になるので
+                speechText = Regex.Replace(speechText, askPattern, "教えて");
                 speechText = $"ねえ、グーグルさん。{speechText}";
+
+                speechText += "wowow";
             }
             else
             {//呼び出し名から始まらないパターン
 
                 //そもそも呼び出し名が含まれているかどうか
-                if (phrase.Contains(skillName))
+                if (phrase.Contains("google"))
                 {
                     //呼び出し名が含まれている
                     //そのパターンは以下のとおりであることを前提とする。
@@ -122,13 +72,13 @@ namespace PleaseGoogleHomeSkill_Csharp
 
                     //呼び出し名からみて、後ろがサポートフレーズ
                     //前が「アクション　+　つなぎ語」
-                    var splittedPhrase = Regex.Split(phrase, skillName);
+                    var splittedPhrase = Regex.Split(phrase, "google");
                     var frontPhrase = splittedPhrase[0];
                     var rearPhrase = splittedPhrase[1];
 
 
                     //後半部がサポートフレーズから始まっているかどうか
-                    var supportPhrase = supportPhraseAfterSkillName.OrderByDescending(item => item.Length)
+                    var supportPhrase = PhrasePattern.supportPhraseAfterSkillName.OrderByDescending(item => item.Length)
                         .FirstOrDefault(item => Regex.IsMatch(rearPhrase, $"^{item}"));
                     if (supportPhrase == null)
                     {
@@ -137,13 +87,10 @@ namespace PleaseGoogleHomeSkill_Csharp
                         return speechText;
                     }
 
-
-                    ////前半部分からつなぎ語を削除したものがアクション
-                    //var endWithSkillNamePattern = @"google\s*さん$";
-
                     //つなぎ語を削除しない
-                    var connective = connectiveAfterAction.OrderByDescending(item => item.Length)
+                    var connective = PhrasePattern.connectiveAfterAction.OrderByDescending(item => item.Length)
                         .FirstOrDefault(item => Regex.IsMatch(frontPhrase, $"{item}$"));
+
                     if (connective == null)
                     {
                         //例外
@@ -156,28 +103,27 @@ namespace PleaseGoogleHomeSkill_Csharp
                     rearPhrase = rearPhrase.Substring(1);
 
                     //聞いての場合はそのままGoogleへの問いかけに渡すと変になる
-                    if (rearPhrase == "聞いて")
-                    {
-                        rearPhrase = "教えて";
-                    }
-                    speechText = $"ねえ、ぐーぐるさん。{frontPhrase}{rearPhrase}";
+                    rearPhrase = Regex.Replace(rearPhrase,askPattern,"教えて");
+                    speechText = $"ねえ、グーグルさん。{frontPhrase}{rearPhrase}";
                 }
                 else
                 {
                     //呼び出し名が含まれていない場合はそのままグーグルさんに渡す。
                     //と思ったけれど、
                     //「聞いて」をそのままGoogleへの問いかけに使うと変になるので
-                    speechText = Regex.Replace(phrase, "聞いて", "教えて");
+                    speechText = Regex.Replace(phrase, askPattern, "教えて");
                     speechText = $"ねえ、グーグルさん。{speechText}";
                 }
 
-
-
-
+                speechText += "hello";
             }
+
+
 
             return speechText;
         }
+
+
     }
 
 }

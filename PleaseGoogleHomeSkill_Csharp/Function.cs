@@ -4,14 +4,20 @@ using Alexa.NET.Request.Type;
 using Alexa.NET.Response;
 using Amazon.Lambda.Core;
 using System.Text.RegularExpressions;
+using AlexaPersistentAttributesManager;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
 
 namespace PleaseGoogleHomeSkill_Csharp
 {
-    public class Function
+    public partial class Function
     {
+        private readonly string _skillTitleForCard = "お願いグーグルさん";
+
+        private readonly string _phraseKeyName = "phrase";
+
+
         //テスト
         /// <summary>
         /// A simple function that takes a string and does a ToUpper
@@ -25,27 +31,28 @@ namespace PleaseGoogleHomeSkill_Csharp
 
             try
             {
+         
                 //1.LaunchRequestかIntentRequestか
                 //型スイッチを使った方法
                 switch (skillRequest.Request)
                 {
                     case LaunchRequest launchRequest://型がLaunchRequestだった場合に、RequestをLaunchRequestにキャストして、変数launchRequestに入れてくれる。便利
-                        skillResponse = LaunchRequestHandler(launchRequest);
+                        skillResponse = LaunchRequestHandler(skillRequest);
                         break;
                     case IntentRequest intentRequest:
                         switch (intentRequest.Intent.Name)
                         {
                             case "DelegateGoogleHomeIntent":
-                                skillResponse = DelegateGoogleHomeIntentHandler(intentRequest);
+                                skillResponse = DelegateSmartSpeakerIntentHandler(skillRequest);
                                 break;
                             case "AMAZON.HelpIntent":
-                                skillResponse = HelpIntentHandler(intentRequest);
+                                skillResponse = HelpIntentHandler(skillRequest);
                                 break;
                             case "AMAZON.CancelIntent":
-                                skillResponse = CancelAndStopIntentHandler(intentRequest);
+                                skillResponse = CancelAndStopIntentHandler(skillRequest);
                                 break;
                             case "AMAZON.StopIntent":
-                                skillResponse = CancelAndStopIntentHandler(intentRequest);
+                                skillResponse = CancelAndStopIntentHandler(skillRequest);
                                 break;
                             default:
                                 break;
@@ -67,15 +74,16 @@ namespace PleaseGoogleHomeSkill_Csharp
 
         #region 各インテント、リクエストに対応する処理を担当するメソッドたち
 
-        private SkillResponse LaunchRequestHandler(LaunchRequest launchRequest)
+        private SkillResponse LaunchRequestHandler(SkillRequest skillRequest)
         {
-            var speechText = "グーグルさんに何を訊きますか？";
-
             var skillResponse = new SkillResponse
             {
                 Version = "1.0",
                 Response = new ResponseBody()
             };
+
+
+            var speechText = $"グーグルさんに何を訊きますか？";
 
             skillResponse.Response.OutputSpeech = new PlainTextOutputSpeech
             {
@@ -90,16 +98,17 @@ namespace PleaseGoogleHomeSkill_Csharp
             };
             skillResponse.Response.Card = new SimpleCard
             {
-                Title = "グーグルさん",
+                Title =_skillTitleForCard,
                 Content = speechText
             };
 
             return skillResponse;
         }
 
-        private SkillResponse DelegateGoogleHomeIntentHandler(IntentRequest intentRequest)
+        private SkillResponse DelegateSmartSpeakerIntentHandler(SkillRequest skillRequest)
         {
-            var phrase = intentRequest.Intent.Slots["phrase"].Value;
+            var intentRequest = skillRequest.Request as IntentRequest;
+            var phrase = intentRequest.Intent.Slots[_phraseKeyName].Value;
 
             var speechText = "";
 
@@ -110,6 +119,7 @@ namespace PleaseGoogleHomeSkill_Csharp
             };
 
 
+            //"phrase"スロットに何も入っていなかった場合はここでおしまい
             if (string.IsNullOrWhiteSpace(phrase))
             {
                 speechText = "すみません。聞き取れませんでした。もう一度言ってください。";
@@ -134,7 +144,7 @@ namespace PleaseGoogleHomeSkill_Csharp
 
 
 
-            speechText = Phrase.ComposeAskGoogleHomeText(phrase);
+            speechText = Phrase.ComposeAskSmartSpeakerText(phrase);
 
             skillResponse.Response.OutputSpeech = new PlainTextOutputSpeech
             {
@@ -142,7 +152,7 @@ namespace PleaseGoogleHomeSkill_Csharp
             };
             skillResponse.Response.Card = new SimpleCard
             {
-                Title = "グーグルさん",
+                Title =_skillTitleForCard,
                 Content = speechText
             };
             skillResponse.Response.ShouldEndSession = true;
@@ -150,7 +160,7 @@ namespace PleaseGoogleHomeSkill_Csharp
             return skillResponse;
         }
 
-        private SkillResponse HelpIntentHandler(IntentRequest intentRequest)
+        private SkillResponse HelpIntentHandler(SkillRequest skillRequest)
         {
             var speechText = "もし私のとなりにグーグルさんがいるのなら、私からグーグルさんに訊いてみます。"
                 + "例えば、グーグルさんを開いて明日の天気を教えて、と訊いてみてください。";
@@ -175,7 +185,7 @@ namespace PleaseGoogleHomeSkill_Csharp
         }
 
 
-        private SkillResponse CancelAndStopIntentHandler(IntentRequest intentRequest)
+        private SkillResponse CancelAndStopIntentHandler(SkillRequest skillRequest)
         {
             var skillResponse = new SkillResponse
             {
@@ -188,7 +198,7 @@ namespace PleaseGoogleHomeSkill_Csharp
         }
 
 
-        private SkillResponse SessionEndedRequestHandler(SessionEndedRequest sessionEndedRequest)
+        private SkillResponse SessionEndedRequestHandler(SkillRequest skillRequest)
         {
             var skillResponse = new SkillResponse
             {
@@ -203,7 +213,7 @@ namespace PleaseGoogleHomeSkill_Csharp
 
         private SkillResponse ErrorHandler(SkillRequest skillRequest)
         {
-            var speechText = "すみません。聞き取れませんでした。に";
+            var speechText = "すみません。聞き取れませんでした。";
 
             var skillResponse = new SkillResponse
             {
@@ -222,6 +232,7 @@ namespace PleaseGoogleHomeSkill_Csharp
                     Text = speechText
                 }
             };
+            skillResponse.Response.ShouldEndSession = true;
 
             return skillResponse;
         }
