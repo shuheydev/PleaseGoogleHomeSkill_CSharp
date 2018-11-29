@@ -126,7 +126,7 @@ namespace PleaseGoogleHomeSkill_Csharp
 
                 skillResponse.Response.OutputSpeech = new PlainTextOutputSpeech
                 {
-                    Text = phrase
+                    Text = speechText
                 };
                 skillResponse.Response.Reprompt = new Reprompt
                 {
@@ -138,10 +138,6 @@ namespace PleaseGoogleHomeSkill_Csharp
 
                 return skillResponse;
             }
-
-
-
-
 
 
             speechText = Phrase.ComposeAskSmartSpeakerText(phrase);
