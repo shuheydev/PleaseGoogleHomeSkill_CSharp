@@ -58,7 +58,6 @@ namespace PleaseGoogleHomeSkill_Csharp
                 speechText = Regex.Replace(speechText, askPattern, "教えて");
                 speechText = $"ねえ、グーグルさん。{speechText}";
 
-                speechText += "wowow";
             }
             else
             {//呼び出し名から始まらないパターン
@@ -114,8 +113,6 @@ namespace PleaseGoogleHomeSkill_Csharp
                     speechText = Regex.Replace(phrase, askPattern, "教えて");
                     speechText = $"ねえ、グーグルさん。{speechText}";
                 }
-
-                speechText += "hello";
             }
 
 
